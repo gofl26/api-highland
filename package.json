@@ -1,9 +1,11 @@
 {
   "name": "api-highland",
   "version": "1.0.0",
+  "type": "commonjs",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "npx tsc && node dist/index.js",
     "migrate:create": "node-pg-migrate create --migrations-dir src/db/migrations",
     "migrate:up": "node-pg-migrate up --migrations-dir src/db/migrations",
     "migrate:down": "node-pg-migrate down --migrations-dir src/db/migrations"

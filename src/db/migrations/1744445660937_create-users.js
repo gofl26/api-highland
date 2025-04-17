@@ -19,7 +19,7 @@ exports.up = (pgm) => {
     password: { type: 'text', notNull: true },
     user_name: { type: 'text', notNull: true },
     role: { type: 'text', notNull: true, default: 'customer' },
-    phone_Number: { type: 'text' },
+    phone_number: { type: 'text' },
     gender: { type: 'text' },
     kakao_id: { type: 'text' },
     created_at: { type: 'timestamp', default: pgm.func('current_timestamp') },

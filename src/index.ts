@@ -4,11 +4,10 @@ import { Pool } from 'pg'
 import cors from 'cors'
 import logger from './utils/logger'
 import fs from 'fs'
-import path from 'path'
 import { loadRoutes } from './loadRoutes'
+dotenv.config()
 
 const { FILESTORAGE_PATH = '/tmp/highlandStorage' } = process.env
-dotenv.config()
 
 const app = express()
 const port = 3001
@@ -56,6 +55,7 @@ app.get('/', async (_req, res) => {
 loadRoutes(app)
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  void next
   const status = err.status || 500
   const message = err.message || 'Internal server error'
   console.error(`Error: ${message}`)

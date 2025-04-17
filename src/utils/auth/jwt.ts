@@ -1,10 +1,10 @@
 import jwt from 'jsonwebtoken'
-import { HttpError } from '../utils/httpError'
-
+import { HttpError } from '../httpError'
+import { PasswordNotIncludesUser } from '../../types/user/user'
 const { PRIVATE_PASSWORD = '' } = process.env
 
-export const generateAccessToken = (id: string) => {
-  return jwt.sign({ id }, PRIVATE_PASSWORD, { expiresIn: '1h' })
+export const generateAccessToken = (user: PasswordNotIncludesUser) => {
+  return jwt.sign(user, PRIVATE_PASSWORD, { expiresIn: '24h' })
 }
 export const verifyAccessToken = (token: string) => {
   return jwt.verify(token, PRIVATE_PASSWORD, (err, decoded) => {

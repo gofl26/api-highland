@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express'
 import { pool } from '../db/index'
 import { HttpError } from '../utils/httpError'
-import { hashPassword, checkPassword } from '../utils/bcrypt'
-import { snakeToCamelObject } from '../utils/toCamel'
-import { buildUpdateQuery } from '../utils/buildUpdateQuery'
+import { hashPassword, checkPassword } from '../utils/auth/bcrypt'
+import { snakeToCamelObject } from '../utils/transform/toCamel'
+import { buildUpdateQuery } from '../utils/query/buildUpdateQuery'
+import { buildGetQuery } from '../utils/query/buildGetQuery'
+import { buildGetTotalQuery } from '../utils/query/buildGetTotalQuery'
 import { AuthenticatedRequest } from '../types'
 
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -66,12 +68,14 @@ export const updateUser = (async (req: AuthenticatedRequest, res: Response, next
         userName: body.userName,
         phoneNumber: body.phoneNumber,
         password: body.password,
+        role: body.role,
       },
       where: { id },
       fieldMap: {
         userName: 'user_name',
         phoneNumber: 'phone_number',
         password: 'password',
+        role: 'role',
       },
     })
     await client.query(query, values)
@@ -93,7 +97,7 @@ export const deleteUser = (async (req: AuthenticatedRequest, res: Response, next
     await client.query('BEGIN')
     await client.query('DELETE FROM users WHERE id = $1', [id])
     await client.query('COMMIT')
-    res.status(201).json({ message: 'Edit success' })
+    res.status(201).json({ message: 'Delete success' })
   } catch (err) {
     await client.query('ROLLBACK')
     next(err)
@@ -131,34 +135,37 @@ export const checkUser = (async (req: AuthenticatedRequest, res: Response, next:
 }) as RequestHandler
 
 export const getUsers = (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  // const client = await pool.connect()
-  // try {
-  //   const getQueryResponse = await getQuery(req, res, next, 'users', true)
-  //   if (!getQueryResponse) throw new HttpError('Query generation failed', 500)
-  //   const getQueryTotalResponse = await getTotalQuery(req, res, next, 'users', true)
-  //   if (!getQueryTotalResponse) throw new HttpError('Query generation failed', 500)
-  //   const { query, params } = getQueryResponse
-  //   const { totalQuery, totalParams } = getQueryTotalResponse
-  //   await client.query('BEGIN')
-  //   const result = await pool.query(query, params)
-  //   const totalResult = await pool.query(totalQuery, totalParams)
-  //   await client.query('COMMIT')
-  //   const camel = snakeToCamelObject(result.rows)
-  //   const a = camel.map((obj) => {
-  //     const passwordNotIncludes = Object.entries(obj).reduce((acc, [key, value]) => {
-  //       if (key === 'password') return acc
-  //       Object.assign(acc, { [key]: value })
-  //       return acc
-  //     }, {})
-  //     return passwordNotIncludes
-  //   })
-  //   res.status(201).json({
-  //     data: { rows: a, total: Number(totalResult.rows[0].total) },
-  //   })
-  // } catch (err) {
-  //   await client.query('ROLLBACK')
-  //   next(err)
-  // } finally {
-  //   client.release()
-  // }
+  const client = await pool.connect()
+  try {
+    const { role } = req.user
+    if (role !== 'admin') throw new HttpError('No permission', 401)
+    const getQueryResponse = await buildGetQuery(req, next, 'users')
+    if (!getQueryResponse) throw new HttpError('Query generation failed', 500)
+    const getQueryTotalResponse = await buildGetTotalQuery(req, next, 'users')
+    if (!getQueryTotalResponse) throw new HttpError('Query generation failed', 500)
+    const { query, params } = getQueryResponse
+    const { totalQuery, totalParams } = getQueryTotalResponse
+    await client.query('BEGIN')
+    const result = await pool.query(query, params)
+    const totalResult = await pool.query(totalQuery, totalParams)
+    await client.query('COMMIT')
+    const camel = snakeToCamelObject(result.rows)
+    console.info('🚀 camel:', camel)
+    const a = camel.map((obj) => {
+      const passwordNotIncludes = Object.entries(obj).reduce((acc, [key, value]) => {
+        if (key === 'password') return acc
+        Object.assign(acc, { [key]: value })
+        return acc
+      }, {})
+      return passwordNotIncludes
+    })
+    res.status(201).json({
+      data: { rows: a, total: Number(totalResult.rows[0].total) },
+    })
+  } catch (err) {
+    await client.query('ROLLBACK')
+    next(err)
+  } finally {
+    client.release()
+  }
 }) as RequestHandler
