@@ -19,9 +19,9 @@ exports.up = (pgm) => {
       type: 'text',
       notNull: true,
     },
-    site_logo: { type: 'text' },
-    create_at: { type: 'timestamp', default: pgm.func('current_timestamp') },
-    update_at: { type: 'timestamp', default: pgm.func('current_timestamp') },
+    sites_file: { type: 'text' },
+    created_at: { type: 'timestamp', default: pgm.func('current_timestamp') },
+    updated_at: { type: 'timestamp', default: pgm.func('current_timestamp') },
   })
   pgm.sql(`
     CREATE OR REPLACE FUNCTION update_updated_at_column()

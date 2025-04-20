@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express'
 import { pool } from '../db/index'
 import { HttpError } from '../utils/httpError'
 import { checkPassword } from '../utils/auth/bcrypt'
-import { generateAccessToken } from '../utils/auth/jwt'
+import { generateAccessToken, verifyAccessToken } from '../utils/auth/jwt'
 import { User } from '../types/user/user'
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
@@ -28,6 +28,20 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     } else {
       throw new HttpError('Bad request', 400)
     }
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const tokenVerify = async (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization
+  try {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new HttpError('Authorization token missing or malformed', 401)
+    }
+    const token = authHeader.split(' ')[1]
+    const decoded = verifyAccessToken(token)
+    res.status(201).json({ message: 'Token is valid', user: decoded })
   } catch (error) {
     next(error)
   }

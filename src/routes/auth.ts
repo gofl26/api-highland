@@ -5,5 +5,6 @@ import * as authController from '../controllers/auth'
 const router = Router()
 
 router.post('/login', authController.login)
+router.get('/tokenVerify', authController.tokenVerify)
 
 export default router

@@ -28,7 +28,7 @@ exports.up = (pgm) => {
       onDelete: 'CASCADE',
     },
     inquiry_category: { type: 'text' },
-    inquiry_image: { type: 'text' },
+    inquiries_file: { type: 'text' },
     inquiry_title: { type: 'text' },
     inquiry_desc: { type: 'text' },
     inquiry_answer: { type: 'text' },

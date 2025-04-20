@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import * as userController from '../controllers/users'
 import authMiddleware from '../middleware/authMiddleware'
+import adminAuthMiddleware from '../middleware/adminAuthMiddleware'
 
 const router = Router()
 
@@ -11,6 +12,6 @@ router.delete('/delete', authMiddleware, userController.deleteUser)
 
 router.get('/checkEmail', userController.checkEmail)
 router.post('/checkUser', authMiddleware, userController.checkUser)
-router.get('/getAll', authMiddleware, userController.getUsers)
+router.get('/getAll', adminAuthMiddleware, userController.getUsers)
 
 export default router

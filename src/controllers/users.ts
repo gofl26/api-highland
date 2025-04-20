@@ -39,13 +39,13 @@ export const getUser = (async (req: AuthenticatedRequest, res: Response, next: N
     if (!id) throw new HttpError('Bad request', 400)
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [id])
     if (result.rows.length === 0) throw new HttpError('Bad request', 400)
-    const passwordNotIncludes = Object.entries(result.rows[0]).reduce((acc, [key, value]) => {
+    const camel = snakeToCamelObject(result.rows)
+    const passwordNotIncludes = Object.entries(camel[0]).reduce((acc, [key, value]) => {
       if (key === 'password') return acc
       Object.assign(acc, { [key]: value })
       return acc
     }, {})
-    const camel = snakeToCamelObject(passwordNotIncludes)
-    res.status(201).json({ data: camel })
+    res.status(201).json({ data: passwordNotIncludes })
   } catch (err) {
     next(err)
   }
@@ -137,8 +137,6 @@ export const checkUser = (async (req: AuthenticatedRequest, res: Response, next:
 export const getUsers = (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const client = await pool.connect()
   try {
-    const { role } = req.user
-    if (role !== 'admin') throw new HttpError('No permission', 401)
     const getQueryResponse = await buildGetQuery(req, next, 'users')
     if (!getQueryResponse) throw new HttpError('Query generation failed', 500)
     const getQueryTotalResponse = await buildGetTotalQuery(req, next, 'users')
@@ -146,12 +144,11 @@ export const getUsers = (async (req: AuthenticatedRequest, res: Response, next: 
     const { query, params } = getQueryResponse
     const { totalQuery, totalParams } = getQueryTotalResponse
     await client.query('BEGIN')
-    const result = await pool.query(query, params)
-    const totalResult = await pool.query(totalQuery, totalParams)
+    const result = await client.query(query, params)
+    const totalResult = await client.query(totalQuery, totalParams)
     await client.query('COMMIT')
     const camel = snakeToCamelObject(result.rows)
-    console.info('🚀 camel:', camel)
-    const a = camel.map((obj) => {
+    const rows = camel.map((obj) => {
       const passwordNotIncludes = Object.entries(obj).reduce((acc, [key, value]) => {
         if (key === 'password') return acc
         Object.assign(acc, { [key]: value })
@@ -160,7 +157,7 @@ export const getUsers = (async (req: AuthenticatedRequest, res: Response, next: 
       return passwordNotIncludes
     })
     res.status(201).json({
-      data: { rows: a, total: Number(totalResult.rows[0].total) },
+      data: { rows, total: Number(totalResult.rows[0].total) },
     })
   } catch (err) {
     await client.query('ROLLBACK')
