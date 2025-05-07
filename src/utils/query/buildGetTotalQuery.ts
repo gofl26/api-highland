@@ -4,7 +4,10 @@ import { HttpError } from '../httpError'
 
 export const buildGetTotalQuery = async (req: Request, next: NextFunction, table: string) => {
   try {
-    const { sdate, edate, date = 'created', ...body } = req.query
+    const { from = 0, size = 10, sort = '', sdate, edate, date = 'created', ...body } = req.query
+    from.toString()
+    sort.toString()
+    size.toString()
     const queryArray = [`SELECT COUNT(*) AS total FROM ${table}`]
     const whereArray = []
     const params = []

@@ -11,7 +11,7 @@ export default function authMiddleware(req: Request, res: Response, next: NextFu
   const token = authHeader.split(' ')[1]
   try {
     const decoded = verifyAccessToken(token)
-    Object.assign(req, { user: decoded })
+    Object.assign(req, { user: decoded.user })
     next()
   } catch (error) {
     next(error)

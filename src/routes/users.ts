@@ -13,5 +13,6 @@ router.delete('/delete', authMiddleware, userController.deleteUser)
 router.get('/checkEmail', userController.checkEmail)
 router.post('/checkUser', authMiddleware, userController.checkUser)
 router.get('/getAll', adminAuthMiddleware, userController.getUsers)
-
+router.put('/updateAll', adminAuthMiddleware, userController.updateUsers)
+router.delete('/deleteAll', adminAuthMiddleware, userController.deleteUsers)
 export default router

@@ -71,7 +71,7 @@ export const buildGetQuery = async (req: Request, next: NextFunction, table: str
         throw new HttpError('Bad request', 400)
       }
     }
-    queryArray.push(`LIMIT ${size} OFFSET ${from}`)
+    queryArray.push(`LIMIT ${Number(size)} OFFSET ${Number(from)}`)
     const query = queryArray.join(' ')
     return { query, params }
   } catch (error) {

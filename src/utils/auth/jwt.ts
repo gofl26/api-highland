@@ -3,12 +3,26 @@ import { HttpError } from '../httpError'
 import { PasswordNotIncludesUser } from '../../types/user/user'
 const { PRIVATE_PASSWORD = '' } = process.env
 
-export const generateAccessToken = (user: PasswordNotIncludesUser) => {
-  return jwt.sign(user, PRIVATE_PASSWORD, { expiresIn: '24h' })
+interface DecodedAccessToken {
+  sessionId: string
+  user: PasswordNotIncludesUser
 }
-export const verifyAccessToken = (token: string) => {
-  return jwt.verify(token, PRIVATE_PASSWORD, (err, decoded) => {
-    if (err) throw new HttpError('Invalid or expired token', 401)
-    else return decoded
-  })
+
+export const generateAccessToken = ({
+  sessionId,
+  user,
+}: {
+  sessionId: string
+  user: PasswordNotIncludesUser
+}) => {
+  return jwt.sign({ sessionId, user }, PRIVATE_PASSWORD, { expiresIn: '24h' })
+}
+export const verifyAccessToken = (token: string): DecodedAccessToken => {
+  const decoded = jwt.verify(token, PRIVATE_PASSWORD) as DecodedAccessToken
+
+  if (!decoded || typeof decoded !== 'object' || !('sessionId' in decoded)) {
+    throw new HttpError('Invalid token structure', 401)
+  }
+
+  return decoded
 }

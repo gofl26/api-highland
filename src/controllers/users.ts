@@ -62,22 +62,29 @@ export const updateUser = (async (req: AuthenticatedRequest, res: Response, next
       const hashedPassword = await hashPassword(body.password)
       Object.assign(body, { password: hashedPassword })
     }
-    const { query, values } = buildUpdateQuery({
+    const update = {
       table: 'users',
-      data: {
-        userName: body.userName,
-        phoneNumber: body.phoneNumber,
-        password: body.password,
-        role: body.role,
-      },
+      data: {},
       where: { id },
-      fieldMap: {
-        userName: 'user_name',
-        phoneNumber: 'phone_number',
-        password: 'password',
-        role: 'role',
-      },
-    })
+      fieldMap: {},
+    }
+    if (body.userName !== undefined) {
+      Object.assign(update.data, { userName: body.userName })
+      Object.assign(update.fieldMap, { userName: 'user_name' })
+    }
+    if (body.phoneNumber !== undefined) {
+      Object.assign(update.data, { phoneNumber: body.phoneNumber })
+      Object.assign(update.fieldMap, { phoneNumber: 'phone_number' })
+    }
+    if (body.password !== undefined) {
+      Object.assign(update.data, { password: body.password })
+      Object.assign(update.fieldMap, { password: 'password' })
+    }
+    if (body.role !== undefined) {
+      Object.assign(update.data, { role: body.role })
+      Object.assign(update.fieldMap, { role: 'role' })
+    }
+    const { query, values } = buildUpdateQuery(update)
     await client.query(query, values)
     await client.query('COMMIT')
     res.status(201).json({ message: 'Edit success' })
@@ -159,6 +166,75 @@ export const getUsers = (async (req: AuthenticatedRequest, res: Response, next: 
     res.status(201).json({
       data: { rows, total: Number(totalResult.rows[0].total) },
     })
+  } catch (err) {
+    await client.query('ROLLBACK')
+    next(err)
+  } finally {
+    client.release()
+  }
+}) as RequestHandler
+
+export const updateUsers = (async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  const client = await pool.connect()
+  try {
+    const body = req.body
+    if (!body.id) throw new HttpError('Bad request: required id', 400)
+    await client.query('BEGIN')
+    if (body.password) {
+      const hashedPassword = await hashPassword(body.password)
+      Object.assign(body, { password: hashedPassword })
+    }
+    const update = {
+      table: 'users',
+      data: {},
+      where: { id: body.id },
+      fieldMap: {},
+    }
+    if (body.userName !== undefined) {
+      Object.assign(update.data, { userName: body.userName })
+      Object.assign(update.fieldMap, { userName: 'user_name' })
+    }
+    if (body.phoneNumber !== undefined) {
+      Object.assign(update.data, { phoneNumber: body.phoneNumber })
+      Object.assign(update.fieldMap, { phoneNumber: 'phone_number' })
+    }
+    if (body.password !== undefined) {
+      Object.assign(update.data, { password: body.password })
+      Object.assign(update.fieldMap, { password: 'password' })
+    }
+    if (body.role !== undefined) {
+      Object.assign(update.data, { role: body.role })
+      Object.assign(update.fieldMap, { role: 'role' })
+    }
+    const { query, values } = buildUpdateQuery(update)
+    await client.query(query, values)
+    await client.query('COMMIT')
+    res.status(201).json({ message: 'Edit success' })
+  } catch (err) {
+    await client.query('ROLLBACK')
+    next(err)
+  } finally {
+    client.release()
+  }
+}) as RequestHandler
+
+export const deleteUsers = (async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  const client = await pool.connect()
+  try {
+    const { id } = req.body
+    if (!id) throw new HttpError('Bad request: required id', 400)
+    await client.query('BEGIN')
+    await client.query('DELETE FROM users WHERE id = $1', [id])
+    await client.query('COMMIT')
+    res.status(201).json({ message: 'Delete success' })
   } catch (err) {
     await client.query('ROLLBACK')
     next(err)

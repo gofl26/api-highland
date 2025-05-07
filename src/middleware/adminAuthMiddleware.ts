@@ -10,10 +10,10 @@ export default function adminAuthMiddleware(req: Request, res: Response, next: N
   }
   const token = authHeader.split(' ')[1]
   try {
-    const decoded: any = verifyAccessToken(token)
-    const { role = '' } = decoded
+    const { user }: any = verifyAccessToken(token)
+    const { role = '' } = user
     if (role !== 'admin') throw new HttpError('No permission', 401)
-    Object.assign(req, { user: decoded })
+    Object.assign(req, { user })
     next()
   } catch (error) {
     next(error)
