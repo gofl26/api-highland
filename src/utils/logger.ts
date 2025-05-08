@@ -1,12 +1,19 @@
 import { createLogger, transports, format } from 'winston'
 import DailyRotateFile from 'winston-daily-rotate-file'
+import type { TransformableInfo } from 'logform'
 
 const logger = createLogger({
   level: 'info',
   format: format.combine(
     format.timestamp(),
-    format.printf(({ timestamp, level, message }) => {
-      return `[${timestamp}] [${level.toUpperCase()}]: ${message}`
+    format.printf((info: TransformableInfo) => {
+      const { timestamp, level, message } = info
+      const formattedMessage =
+        typeof message === 'object'
+          ? JSON.stringify(message, null, 2) // 보기 좋게 들여쓰기
+          : String(message)
+
+      return `[${timestamp}] [${level.toUpperCase()}]: ${formattedMessage}`
     }),
   ),
   transports: [
