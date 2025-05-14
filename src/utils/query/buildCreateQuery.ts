@@ -32,7 +32,7 @@ export function buildCreateQuery(
   if (file) {
     const fileKey = toSnakeCase(file.fieldname)
     snakeKeys.push(`${tableName}_${fileKey}`)
-    values.push(file.path) // 또는 file.filename 사용 가능
+    values.push(file.filename) // 또는 file.filename 사용 가능
   }
 
   const columns = snakeKeys.map((k) => `"${k}"`).join(', ')
