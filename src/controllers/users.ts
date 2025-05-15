@@ -12,6 +12,8 @@ import { User } from '../types/user/user'
 
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
   const client = await pool.connect()
+  const userAgent = req.headers['user-agent'] || ''
+  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '') as string
   try {
     const { email, password, userName, phoneNumber, gender, kakaoId } = req.body
     if (!userName || !email || !password) {
@@ -27,7 +29,14 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     )
     await client.query('COMMIT')
     if (_result) {
-      const sessionId = _result.rows[0].id
+      // ✅ 로그인 이력 저장
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      const __result = await pool.query(
+        `INSERT INTO user_session (user_id, ip_address, user_agent, expires_at) 
+               VALUES ($1, $2, $3, $4) RETURNING *`,
+        [_result.rows[0].id, ip, userAgent, expiresAt],
+      )
+      const sessionId = __result.rows[0].id
       const user: User = _result.rows[0]
       const _user: any = Object.entries(user).reduce((acc, [key, value]) => {
         if (key === 'password') return acc
