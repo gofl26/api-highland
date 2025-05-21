@@ -35,7 +35,7 @@ exports.up = (pgm) => {
     is_public: { type: 'boolean', notNull: true, default: true },
     created_at: { type: 'timestamp', default: pgm.func('current_timestamp') },
     updated_at: { type: 'timestamp', default: pgm.func('current_timestamp') },
-    answer_at: { type: 'timestamp', default: pgm.func('current_timestamp') },
+    answer_at: { type: 'timestamp' },
   })
   pgm.sql(`
     CREATE OR REPLACE FUNCTION update_updated_at_column()

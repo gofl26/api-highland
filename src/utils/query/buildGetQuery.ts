@@ -2,75 +2,105 @@ import { Request, NextFunction } from 'express'
 import { toSnakeCase } from '../transform/toSnake'
 import { HttpError } from '../httpError'
 
-export const buildGetQuery = async (req: Request, next: NextFunction, table: string) => {
+type JoinOption = {
+  table: string
+  type: 'INNER' | 'LEFT' | 'RIGHT' | 'FULL'
+  on: string
+}
+
+export const buildGetQuery = async (
+  req: Request,
+  next: NextFunction,
+  table: string,
+  joins: JoinOption[] = [],
+) => {
   try {
-    const { from = 0, size = 10, sort = '', sdate, edate, date = 'created', ...body } = req.query
-    const queryArray = [`SELECT * FROM ${table}`]
+    const {
+      from = 0,
+      size = 10,
+      sort = '',
+      sdate,
+      edate,
+      date = 'createdAt',
+      selects = '*',
+      ...body
+    } = req.query
+    const selectClause = Array.isArray(selects) ? selects.join(', ') : selects
+    const queryArray = [`SELECT ${selectClause} FROM ${table}`]
     const whereArray = []
-    const params = []
+    const params: any[] = []
+
+    // JOIN 절 추가
+    joins.forEach(({ table: joinTable, type, on }) => {
+      const upperType = type.toUpperCase()
+      if (!['INNER', 'LEFT', 'RIGHT', 'FULL'].includes(upperType))
+        throw new HttpError('Invalid join type', 400)
+      queryArray.push(`${upperType} JOIN ${joinTable} ON ${on}`)
+    })
+
+    // WHERE 조건 처리
     Object.entries(body).forEach(([key, value]) => {
       const checkWhereKey = key.split('.')
-      if (checkWhereKey.length === 1)
+      if (checkWhereKey.length === 1) {
         whereArray.push({ key: toSnakeCase(key), value, type: 'match' })
-      else if (checkWhereKey.length === 2) {
-        if (checkWhereKey[1] === 'like')
-          whereArray.push({
-            key: toSnakeCase(checkWhereKey[0]),
-            value,
-            type: 'like',
-          })
-        else if (checkWhereKey[1] === 'not')
-          whereArray.push({
-            key: toSnakeCase(checkWhereKey[0]),
-            value,
-            type: 'not',
-          })
-        else if (checkWhereKey[1] === 'or')
-          whereArray.push({
-            key: toSnakeCase(checkWhereKey[0]),
-            value,
-            type: 'or',
-          })
+      } else if (checkWhereKey.length === 2) {
+        const [col, op] = checkWhereKey
+        if (op === 'like') {
+          whereArray.push({ key: toSnakeCase(col), value, type: 'like' })
+        } else if (op === 'not') {
+          whereArray.push({ key: toSnakeCase(col), value, type: 'not' })
+        } else if (op === 'or') {
+          whereArray.push({ key: toSnakeCase(col), value, type: 'or' })
+        } else {
+          throw new HttpError('Bad request', 400)
+        }
       } else {
         throw new HttpError('Bad request', 400)
       }
     })
-    if (sdate && edate) whereArray.push({ key: date, type: 'date', value: null })
-    if (whereArray.length > 1) {
+    if (sdate && edate)
+      whereArray.push({
+        key: typeof date === 'string' ? toSnakeCase(date) : date,
+        type: 'date',
+        value: null,
+      })
+    if (whereArray.length > 0) {
+      queryArray.push('WHERE')
       whereArray.forEach(({ key, value, type }, index) => {
-        if (!index) queryArray.push('WHERE')
-        if (index !== 0 && (index || type !== 'or')) queryArray.push('AND')
-        else if (index || type === 'or') queryArray.push('OR')
-        if (type === 'match' || type === 'or') queryArray.push(`${key} = $${index + 1}`)
-        else if (type === 'like') queryArray.push(`${key} LIKE $${index + 1}`)
-        else if (type === 'not') queryArray.push(`${key} != %$${index + 1}%`)
-        else if (type === 'date') queryArray.push(`${key} BETWEEN ${sdate} AND ${edate}`)
-        if (type !== 'date') {
-          if (type === 'like') params.push(`%${value}%`)
-          else params.push(value)
+        if (index > 0) {
+          if (type === 'or') queryArray.push('OR')
+          else queryArray.push('AND')
+        }
+
+        if (type === 'match' || type === 'or') {
+          queryArray.push(`${key} = $${params.length + 1}`)
+          params.push(value)
+        } else if (type === 'like') {
+          queryArray.push(`${key} LIKE $${params.length + 1}`)
+          params.push(`%${value}%`)
+        } else if (type === 'not') {
+          queryArray.push(`${key} != $${params.length + 1}`)
+          params.push(value)
+        } else if (type === 'date') {
+          queryArray.push(`${key} BETWEEN '${sdate}' AND '${edate}'`)
         }
       })
-    } else if (whereArray.length === 1) {
-      if (whereArray[0].type === 'date') {
-        queryArray.push(`${whereArray[0].key} BETWEEN ${sdate} AND ${edate}`)
-      } else if (whereArray[0].type === 'like') {
-        queryArray.push(`WHERE ${whereArray[0].key} LIKE '%${whereArray[0].value}%'`)
-      } else {
-        queryArray.push(`WHERE ${whereArray[0].key} = $1`)
-        params.push(whereArray[0].value)
-      }
     }
     const sortStr = getSortString(sort)
     if (sortStr) {
       const checkSortKey = sortStr.split(':')
       if (checkSortKey.length === 2) {
         queryArray.push(
-          `GROUP BY id, ${toSnakeCase(checkSortKey[0])} ORDER BY ${toSnakeCase(checkSortKey[0])} ${checkSortKey[1] === 'desc' ? 'DESC' : 'ASC'}`,
+          `ORDER BY ${toSnakeCase(checkSortKey[0])} ${checkSortKey[1] === 'desc' ? 'DESC' : 'ASC'}`,
         )
       } else {
         throw new HttpError('Bad request', 400)
       }
+    } else {
+      queryArray.push(`ORDER BY updated_at DESC`)
     }
+
+    // LIMIT OFFSET
     queryArray.push(`LIMIT ${Number(size)} OFFSET ${Number(from)}`)
     const query = queryArray.join(' ')
     return { query, params }
