@@ -7,9 +7,13 @@ import { buildUpdateQuery } from '../utils/query/buildUpdateQuery'
 import { buildGetQuery } from '../utils/query/buildGetQuery'
 import { buildGetTotalQuery } from '../utils/query/buildGetTotalQuery'
 import { AuthenticatedRequest } from '../types'
+import { generateAccessToken } from '../utils/auth/jwt'
+import { User } from '../types/user/user'
 
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
   const client = await pool.connect()
+  const userAgent = req.headers['user-agent'] || ''
+  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '') as string
   try {
     const { email, password, userName, phoneNumber, gender, kakaoId } = req.body
     if (!userName || !email || !password) {
@@ -19,12 +23,29 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     const result = await client.query('SELECT * FROM users WHERE email = $1', [email])
     if (result.rows.length === 1) throw new HttpError('Bad request: exist email', 400)
     const hashedPassword = await hashPassword(password)
-    await client.query(
+    const _result = await client.query(
       'INSERT INTO users (user_name, email, password, phone_number, gender, role, kakao_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
       [userName, email, hashedPassword, phoneNumber, gender, 'customer', kakaoId],
     )
     await client.query('COMMIT')
-    res.status(201).json({ message: 'Success register' })
+    if (_result) {
+      // ✅ 로그인 이력 저장
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      const __result = await pool.query(
+        `INSERT INTO user_session (user_id, ip_address, user_agent, expires_at) 
+               VALUES ($1, $2, $3, $4) RETURNING *`,
+        [_result.rows[0].id, ip, userAgent, expiresAt],
+      )
+      const sessionId = __result.rows[0].id
+      const user: User = _result.rows[0]
+      const _user: any = Object.entries(user).reduce((acc, [key, value]) => {
+        if (key === 'password') return acc
+        Object.assign(acc, { [key]: value })
+        return acc
+      }, {})
+      const accessToken = generateAccessToken({ sessionId, user: _user })
+      res.status(201).json({ accessToken, sessionId })
+    } else throw new HttpError('Bad request', 400)
   } catch (err) {
     await client.query('ROLLBACK')
     next(err)
