@@ -35,7 +35,19 @@ export const createInquiry = (async (
 export const getInquiry = (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const client = await pool.connect()
   try {
-    const getQueryResponse = await buildGetQuery(req, next, 'inquiries')
+    const getQueryResponse = await buildGetQuery(
+      req,
+      next,
+      'inquiries',
+      [
+        {
+          table: 'users',
+          type: 'INNER',
+          on: 'users.id = inquiries.user_id',
+        },
+      ],
+      'inquiries.*, users.name AS user_name',
+    )
     if (!getQueryResponse) throw new HttpError('Query generation failed', 500)
     const getQueryTotalResponse = await buildGetTotalQuery(req, next, 'inquiries')
     if (!getQueryTotalResponse) throw new HttpError('Query generation failed', 500)

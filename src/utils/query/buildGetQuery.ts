@@ -13,20 +13,11 @@ export const buildGetQuery = async (
   next: NextFunction,
   table: string,
   joins: JoinOption[] = [],
+  selects: string = '*',
 ) => {
   try {
-    const {
-      from = 0,
-      size = 10,
-      sort = '',
-      sdate,
-      edate,
-      date = 'createdAt',
-      selects = '*',
-      ...body
-    } = req.query
-    const selectClause = Array.isArray(selects) ? selects.join(', ') : selects
-    const queryArray = [`SELECT ${selectClause} FROM ${table}`]
+    const { from = 0, size = 10, sort = '', sdate, edate, date = 'createdAt', ...body } = req.query
+    const queryArray = [`SELECT ${selects} FROM ${table}`]
     const whereArray = []
     const params: any[] = []
 
