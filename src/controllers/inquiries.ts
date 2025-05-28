@@ -51,7 +51,7 @@ export const getInquiry = (async (req: AuthenticatedRequest, res: Response, next
           on: 'products.id = inquiries.product_id',
         },
       ],
-      'inquiries.*, users.user_name AS user_name, products.name AS product_name',
+      'inquiries.*, users.user_name AS user_name, products.product_name AS product_name',
     )
     if (!getQueryResponse) throw new HttpError('Query generation failed', 500)
     const getQueryTotalResponse = await buildGetTotalQuery(req, next, 'inquiries')
