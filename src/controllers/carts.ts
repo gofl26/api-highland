@@ -44,7 +44,7 @@ export const getCart = (async (req: AuthenticatedRequest, res: Response, next: N
           on: 'products.id = carts.product_id',
         },
       ],
-      'carts.*, products.product_name AS product_name',
+      'carts.*, products.product_name AS product_name, products.products_file AS product_file, products.product_price AS product_price',
     )
     if (!getQueryResponse) throw new HttpError('Query generation failed', 500)
     const getQueryTotalResponse = await buildGetTotalQuery(req, next, 'carts')
