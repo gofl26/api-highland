@@ -33,7 +33,19 @@ export const getCart = (async (req: AuthenticatedRequest, res: Response, next: N
   try {
     const { id, role } = req.user
     if (role !== 'admin') Object.assign(req.query, { userId: id })
-    const getQueryResponse = await buildGetQuery(req, next, 'carts')
+    const getQueryResponse = await buildGetQuery(
+      req,
+      next,
+      'carts',
+      [
+        {
+          table: 'products',
+          type: 'INNER',
+          on: 'products.id = carts.product_id',
+        },
+      ],
+      'carts.*, products.product_name AS product_name',
+    )
     if (!getQueryResponse) throw new HttpError('Query generation failed', 500)
     const getQueryTotalResponse = await buildGetTotalQuery(req, next, 'carts')
     if (!getQueryTotalResponse) throw new HttpError('Query generation failed', 500)
