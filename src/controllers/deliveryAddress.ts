@@ -15,7 +15,10 @@ export const createDeliveryAddress = (async (
 ) => {
   const client = await pool.connect()
   try {
-    const { query, values } = buildCreateQuery('deliveryAddress', req.body)
+    const { id } = req.user
+    const body = req.body
+    Object.assign(body, { userId: id })
+    const { query, values } = buildCreateQuery('deliveryAddress', body)
     await client.query('BEGIN')
     const result = await client.query(query, values)
     await client.query('COMMIT')
