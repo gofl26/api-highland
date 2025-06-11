@@ -18,7 +18,7 @@ export const createDeliveryAddress = (async (
     const { id } = req.user
     const body = req.body
     Object.assign(body, { userId: id })
-    const { query, values } = buildCreateQuery('deliveryAddress', body)
+    const { query, values } = buildCreateQuery('delivery_address', body)
     await client.query('BEGIN')
     const result = await client.query(query, values)
     await client.query('COMMIT')
@@ -35,9 +35,9 @@ export const createDeliveryAddress = (async (
 export const getDeliveryAddress = async (req: Request, res: Response, next: NextFunction) => {
   const client = await pool.connect()
   try {
-    const getQueryResponse = await buildGetQuery(req, next, 'deliveryAddress')
+    const getQueryResponse = await buildGetQuery(req, next, 'delivery_address')
     if (!getQueryResponse) throw new HttpError('Query generation failed', 500)
-    const getQueryTotalResponse = await buildGetTotalQuery(req, next, 'deliveryAddress')
+    const getQueryTotalResponse = await buildGetTotalQuery(req, next, 'delivery_address')
     if (!getQueryTotalResponse) throw new HttpError('Query generation failed', 500)
     const { query, params } = getQueryResponse
     const { totalQuery, totalParams } = getQueryTotalResponse
@@ -69,7 +69,7 @@ export const updateDeliveryAddress = (async (
     if (!body.id) throw new HttpError('Required Id', 400)
     await client.query('BEGIN')
     const update = {
-      table: 'deliveryAddress',
+      table: 'delivery_address',
       data: {},
       where: { id: body.id },
       fieldMap: {},
@@ -121,7 +121,7 @@ export const deleteDeliveryAddress = (async (
     const { id } = body
     if (id === undefined) throw new HttpError('Bad Request', 400)
     await client.query('BEGIN')
-    await client.query('DELETE FROM deliveryAddress WHERE id = $1', [id])
+    await client.query('DELETE FROM delivery_address WHERE id = $1', [id])
     await client.query('COMMIT')
     res.status(201).json({ message: 'Delete success' })
   } catch (err) {
