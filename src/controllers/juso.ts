@@ -6,7 +6,7 @@ export const juso = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { currentPage, countPerPage, keyword } = req.query
     const { data: result } = await axios.get(
-      `https://business.juso.go.kr/addrlink/addrLinkApiJsonp.do?confmKey=${JUSO_CONFM_KEY}&currentPage=${currentPage}&countPerPage=${countPerPage}&keyword=${keyword}&resultType=json`,
+      `http://www.juso.go.kr/addrlink/addrLinkApi.do?confmKey=${JUSO_CONFM_KEY}&currentPage=${currentPage}&countPerPage=${countPerPage}&keyword=${keyword}&resultType=json`,
       {},
     )
     res.status(201).json({ message: result })
