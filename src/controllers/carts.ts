@@ -98,12 +98,38 @@ export const updateCart = (async (req: AuthenticatedRequest, res: Response, next
 export const deleteCart = (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const client = await pool.connect()
   try {
-    const body = req.body
-    const { id } = body
-    if (id === undefined) throw new HttpError('Bad Request', 400)
+    const { id } = req.body
+    const userId = req.user.id
+
+    if (!id || (Array.isArray(id) && id.length === 0)) {
+      throw new HttpError('Bad Request: id is required', 400)
+    }
+
+    const idArray = Array.isArray(id) ? id : [id]
+
+    const { rows } = await client.query(`SELECT id, userId FROM carts WHERE id = ANY($1)`, [
+      idArray,
+    ])
+
+    const unauthorizedIds = rows.filter((row) => row.userId !== userId).map((row) => row.id)
+    const foundIds = rows.map((row) => row.id)
+    const notFoundIds = idArray.filter((i) => !foundIds.includes(i))
+
+    if (unauthorizedIds.length > 0) {
+      throw new HttpError(
+        `Forbidden: no permission to delete carts ${unauthorizedIds.join(', ')}`,
+        403,
+      )
+    }
+
+    if (notFoundIds.length > 0) {
+      throw new HttpError(`Bad Request: carts not found ${notFoundIds.join(', ')}`, 400)
+    }
+
     await client.query('BEGIN')
-    await client.query('DELETE FROM carts WHERE id = $1', [id])
+    await client.query(`DELETE FROM carts WHERE id = ANY($1)`, [idArray])
     await client.query('COMMIT')
+
     res.status(201).json({ message: 'Delete success' })
   } catch (err) {
     await client.query('ROLLBACK')
