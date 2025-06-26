@@ -107,11 +107,11 @@ export const deleteCart = (async (req: AuthenticatedRequest, res: Response, next
 
     const idArray = Array.isArray(id) ? id : [id]
 
-    const { rows } = await client.query(`SELECT id, userId FROM carts WHERE id = ANY($1)`, [
+    const { rows } = await client.query(`SELECT id, user_id FROM carts WHERE id = ANY($1)`, [
       idArray,
     ])
 
-    const unauthorizedIds = rows.filter((row) => row.userId !== userId).map((row) => row.id)
+    const unauthorizedIds = rows.filter((row) => row.user_id !== userId).map((row) => row.id)
     const foundIds = rows.map((row) => row.id)
     const notFoundIds = idArray.filter((i) => !foundIds.includes(i))
 
