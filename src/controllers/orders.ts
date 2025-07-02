@@ -18,15 +18,13 @@ export const createOrder = (async (
     const { id } = req.user
     const { orderList, ...restBody } = req.body
     if (!Array.isArray(orderList)) throw new HttpError('Bad request', 400)
-    let orderAmount = 0
     const deleteCartIdList: string[] = []
     orderList.forEach(({ productId, productPrice, cartQuantity, cartId }) => {
       if (!productId || !productPrice || !cartQuantity || !cartId)
         throw new HttpError('Bad request', 400)
-      orderAmount += productPrice * cartQuantity
       deleteCartIdList.push(cartId)
     })
-    Object.assign(restBody, { userId: id, orderStatus: '입금대기', orderAmount })
+    Object.assign(restBody, { userId: id, orderStatus: '입금대기' })
     const { query, values } = buildCreateQuery('orders', restBody)
     await client.query('BEGIN')
     const result = await client.query(query, values)
