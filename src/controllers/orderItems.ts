@@ -15,9 +15,9 @@ export const getOrderItem = (async (
   try {
     const { id } = req.user
     Object.assign(req.query, { userId: id })
-    const getQueryResponse = await buildGetQuery(req, next, 'orders')
+    const getQueryResponse = await buildGetQuery(req, next, 'order_items')
     if (!getQueryResponse) throw new HttpError('Query generation failed', 500)
-    const getQueryTotalResponse = await buildGetTotalQuery(req, next, 'orders')
+    const getQueryTotalResponse = await buildGetTotalQuery(req, next, 'order_items')
     if (!getQueryTotalResponse) throw new HttpError('Query generation failed', 500)
     const { query, params } = getQueryResponse
     const { totalQuery, totalParams } = getQueryTotalResponse
