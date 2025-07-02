@@ -64,7 +64,25 @@ export const getOrder = (async (req: AuthenticatedRequest, res: Response, next: 
   try {
     const { id, role } = req.user
     if (role !== 'admin') Object.assign(req.query, { userId: id })
-    const getQueryResponse = await buildGetQuery(req, next, 'orders')
+    // const getQueryResponse = await buildGetQuery(req, next, 'orders')
+    const getQueryResponse = await buildGetQuery(
+      req,
+      next,
+      'orders',
+      [
+        {
+          table: 'products',
+          type: 'INNER',
+          on: 'products.id = orders.product_id',
+        },
+        {
+          table: 'order_items',
+          type: 'INNER',
+          on: 'order_items.order_id = orders.id',
+        },
+      ],
+      'orders.*, products.product_name AS product_name, products.products_file AS product_file, order_items.product_price AS product_price, order_items.order_quantity AS order_quantity',
+    )
     if (!getQueryResponse) throw new HttpError('Query generation failed', 500)
     const getQueryTotalResponse = await buildGetTotalQuery(req, next, 'orders')
     if (!getQueryTotalResponse) throw new HttpError('Query generation failed', 500)
