@@ -71,14 +71,14 @@ export const getOrder = (async (req: AuthenticatedRequest, res: Response, next: 
       'orders',
       [
         {
-          table: 'products',
-          type: 'INNER',
-          on: 'products.id = orders.product_id',
-        },
-        {
           table: 'order_items',
           type: 'INNER',
           on: 'order_items.order_id = orders.id',
+        },
+        {
+          table: 'products',
+          type: 'INNER',
+          on: 'products.id = order_items.product_id',
         },
       ],
       'orders.*, products.product_name AS product_name, products.products_file AS product_file, order_items.product_price AS product_price, order_items.order_quantity AS order_quantity',
