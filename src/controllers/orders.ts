@@ -32,7 +32,7 @@ export const createOrder = (async (
     const orderItemsParams: any[] = []
     const valuesPlaceholder: string[] = []
     orderList.forEach(({ productId, productPrice, cartQuantity }, index) => {
-      const offset = index * 4
+      const offset = index * 5
       valuesPlaceholder.push(
         `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`,
       )
