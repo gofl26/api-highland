@@ -1,33 +1,48 @@
-# multi-stage Dockerfile for api-highland
-# build stage
+## Clean optimized multi-stage Dockerfile for api-highland
+# Stages:
+# 1) build: install dev deps and compile TypeScript
+# 2) deps: install production-only node_modules (cached separately)
+# 3) runtime: smallest image with production node_modules and built assets
+
 FROM node:18.20.0-alpine3.18 AS build
 WORKDIR /app
 
-# install build dependencies
+# Install dev dependencies (use CI if lockfile exists). This stage includes tsc.
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts --no-audit --no-fund || npm install
 
-# copy source and build
+# Copy sources and build
 COPY . .
-RUN npx tsc
+RUN npx tsc --build
 
-# runtime stage
+FROM node:18.20.0-alpine3.18 AS deps
+WORKDIR /app
+COPY package*.json ./
+# Install production deps only, optimized for cache
+RUN npm ci --only=production --no-audit --no-fund || npm install --omit=dev
+
 FROM node:18.20.0-alpine3.18 AS runtime
 WORKDIR /app
+
 ENV NODE_ENV=production
+ENV PORT=3001
 
-# only install production dependencies
-COPY package*.json ./
-RUN npm ci --only=production
-
-# copy built artifacts from build stage
+# Copy production node_modules and built dist
+COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 
-EXPOSE 3000
+# Minimal metadata
+COPY package*.json ./
 
-# basic healthcheck (assumes app exposes /health on PORT)
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget -qO- --tries=1 --timeout=2 http://localhost:3000/health || exit 1
+# Create non-root user and fix ownership
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && chown -R appuser:appgroup /app
+USER appuser
 
-# default command — adjust if your entry point differs
+EXPOSE 3001
+
+# Healthcheck: use node runtime to avoid adding curl/wget to image
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:'+ (process.env.PORT || 3001) +'/health', res => { if (res.statusCode !== 200) process.exit(1) })" || exit 1
+
 CMD ["node", "dist/index.js"]
+

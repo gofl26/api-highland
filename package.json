@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "npx tsc && node dist/index.js",
     "start": "npm i && npx tsc && node dist/index.js",
-    "build": "npx tsc && ./scripts/docker-build-push.sh",
+    "build": "./scripts/docker-build-push.sh",
     "publish:image": "./scripts/docker-build-push.sh",
     "migrate:create": "node-pg-migrate create --migrations-dir src/db/migrations",
     "migrate:up": "node-pg-migrate up --migrations-dir src/db/migrations",
