@@ -10,7 +10,7 @@ dotenv.config()
 const { FILESTORAGE_PATH = '/tmp/highlandStorage' } = process.env
 
 const app = express()
-const port = 3001
+const port = process.env.PORT ? Number(process.env.PORT) : 3001
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -52,12 +52,31 @@ app.get('/', async (_req, res) => {
   res.json(result.rows[0])
 })
 
+// lightweight health endpoint for Kubernetes / loadbalancer probes
+app.get('/health', async (_req: express.Request, res: express.Response): Promise<void> => {
+  // simple process liveness + DB check
+  try {
+    // a very light DB check
+    await pool.query('SELECT 1')
+    res.status(200).json({ status: 'ok' })
+    return
+  } catch (error) {
+    console.error('Health check failed:', error)
+    res.status(500).json({ status: 'error' })
+    return
+  }
+})
+
 loadRoutes(app)
 
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
   void next
-  const status = err.status || 500
-  const message = err.message || 'Internal server error'
+  // narrow unknown to extract status/message safely
+  const e =
+    err && typeof err === 'object' ? (err as { status?: number; message?: string }) : undefined
+
+  const status = e && typeof e.status === 'number' ? e.status : 500
+  const message = e && typeof e.message === 'string' ? e.message : 'Internal server error'
   console.error(`Error: ${message}`)
 
   res.status(status).json({ error: message })
